@@ -8,6 +8,14 @@ const api = axios.create({
   }
 })
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('velox_token')?.trim()
+  if (token) {
+    config.headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`
+  }
+  return config
+})
+
 export function normalizeListResponse(data) {
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.data)) return data.data

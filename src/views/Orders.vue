@@ -15,7 +15,10 @@
         </div>
 
         <div v-if="loading" class="state">Buyurtmalar yuklanmoqda...</div>
-        <div v-else-if="errorMessage" class="state error">{{ errorMessage }}</div>
+        <div v-else-if="errorMessage && !orders.length" class="state error">{{ errorMessage }}</div>
+        <p v-if="errorMessage && orders.length" class="state error" role="status">
+          {{ errorMessage }} Keshlangan buyurtmalar ko‘rsatilmoqda.
+        </p>
         <div v-else-if="!currentUser" class="empty-state">
           <div class="empty-icon">📦</div>
           <h2>Kirish kerak</h2>
@@ -57,7 +60,7 @@
               </div>
               <div class="meta-item">
                 <span class="meta-label">Buyurtma sanasi</span>
-                <strong>{{ formatDate(order.createdAt) }}</strong>
+                <strong>{{ formatDate(order.localDateTime ?? order.createdAt) }}</strong>
               </div>
               <div class="meta-item wide">
                 <span class="meta-label">Yetkazib berish manzili</span>
@@ -149,45 +152,23 @@ async function fetchOrders() {
       orders.value = cachedOrders
     }
 
-    let response = null
-    let loadError = null
-    const candidateEndpoints = [
-      `/orders/getByUserId/${currentUser.value.id}`,
-      '/orders/getAll'
-    ]
-
-    for (const endpoint of candidateEndpoints) {
-      try {
-        response = await api.get(endpoint)
-        const payload = normalizeListResponse(response.data)
-        const filtered = payload.filter((item) => String(item.userId) === String(currentUser.value.id))
-        if (filtered.length || endpoint.includes('getAll')) {
-          const merged = [...filtered]
-          const cacheMap = new Map(cachedOrders.map((item) => [String(item.id), item]))
-          for (const item of merged) {
-            const cachedItem = cacheMap.get(String(item.id))
-            if (cachedItem && cachedItem.status !== item.status) {
-              item.status = cachedItem.status
-            }
-          }
-          orders.value = filtered
-          if (filtered.length) {
-            localStorage.setItem(`velox_orders:${currentUser.value.id}`, JSON.stringify(filtered))
-          }
-          break
-        }
-      } catch (error) {
-        loadError = error
+    const response = await api.get('/orders/getAll')
+    const filtered = normalizeListResponse(response.data)
+      .filter((item) => String(item.userId) === String(currentUser.value.id))
+    const cacheMap = new Map(cachedOrders.map((item) => [String(item.id), item]))
+    for (const item of filtered) {
+      const cachedItem = cacheMap.get(String(item.id))
+      if (cachedItem && cachedItem.status !== item.status) {
+        item.status = cachedItem.status
       }
     }
-
-    if (!response && !cachedOrders.length) {
-      throw loadError || new Error('Buyurtmalarni olishda xatolik yuz berdi.')
+    orders.value = filtered
+    if (filtered.length) {
+      localStorage.setItem(`velox_orders:${currentUser.value.id}`, JSON.stringify(filtered))
     }
   } catch (error) {
     console.error('Buyurtmalarni yuklashda xato:', error)
     errorMessage.value = resolveApiError(error, 'Buyurtmalarni yuklab bo‘lmadi.')
-    orders.value = []
   } finally {
     loading.value = false
   }

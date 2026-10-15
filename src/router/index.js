@@ -9,7 +9,8 @@ const routes = [
   {
     path: '/admin',
     name: 'admin',
-    component: () => import('@/views/Adminpanel.vue')
+    component: () => import('@/views/Adminpanel.vue'),
+    meta: { requiresAdmin: true }
   },
   {
     path: '/footer',
@@ -56,6 +57,24 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach((to) => {
+  if (!to.meta.requiresAdmin) return true
+
+  let user
+  try {
+    user = JSON.parse(localStorage.getItem('velox_user') || 'null')
+  } catch {
+    user = null
+  }
+
+  const token = localStorage.getItem('velox_token')
+  if (!token || user?.role !== 'ADMIN') {
+    return { name: 'signin', query: { redirect: to.fullPath } }
+  }
+
+  return true
 })
 
 export default router

@@ -175,11 +175,10 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
-import axios from 'axios'
+import api from '../api.js'
 import { ORDER_STATUSES, writeOrdersCacheForUser } from '../orderStatus.js'
 import { useNotification } from '../composables/useNotification.js'
 
-const API_BASE = '/api'
 const { addNotification } = useNotification()
 
 const tabs = [
@@ -202,7 +201,7 @@ async function fetchProducts() {
   productsLoading.value = true
   productsError.value = ''
   try {
-    const response = await axios.get(`${API_BASE}/products/getAll`)
+    const response = await api.get('/products/getAll')
     products.value = response.data.flat()
   } catch (error) {
     console.error('Mahsulotlarni olishda xato:', error)
@@ -216,7 +215,7 @@ async function createProduct() {
   productFormError.value = ''
   creatingProduct.value = true
   try {
-    await axios.post(`${API_BASE}/products`, {
+    await api.post('http://localhost:8080/products/create', {
       name: newProduct.name,
       price: newProduct.price,
       quantity: newProduct.quantity,
@@ -239,7 +238,7 @@ async function createProduct() {
 async function deleteProduct(id) {
   if (!confirm("Bu mahsulotni o'chirmoqchimisiz?")) return
   try {
-    await axios.delete(`${API_BASE}/products/delete/${id}`)
+    await api.delete(`/products/delete/${id}`)
     await fetchProducts()
   } catch (error) {
     console.error('Mahsulotni o\'chirishda xato:', error)
@@ -262,7 +261,7 @@ async function fetchUsers() {
   usersLoading.value = true
   usersError.value = ''
   try {
-    const response = await axios.get(`${API_BASE}/users/getAll`)
+    const response = await api.get('http://localhost:8080/auth/getAll')
     const payload = response.data
     const list = Array.isArray(payload) ? payload.flat() : payload?.users ?? payload?.data
     if (!Array.isArray(list)) throw new Error('Foydalanuvchilar ro\'yxati noto\'g\'ri formatda.')
@@ -282,7 +281,7 @@ async function deleteUser(id) {
   if (!confirm("Bu foydalanuvchini o'chirmoqchimisiz?")) return
   deletingUserId.value = id
   try {
-    await axios.delete(`${API_BASE}/users/delete/${id}`)
+    await api.delete(`/users/delete/${id}`)
     await fetchUsers()
   } catch (error) {
     console.error('Foydalanuvchini o\'chirishda xato:', error)
@@ -322,7 +321,7 @@ async function fetchOrders() {
   ordersError.value = ''
   ordersLoading.value = true
   try {
-    const response = await axios.get(`${API_BASE}/orders/getAll`)
+    const response = await api.get('http://localhost:8080/orders/getAll')
     const orderList = Array.isArray(response.data) ? response.data.flat() : null
     if (!orderList || !orderList.every((order) => order && order.id)) {
       throw new Error("Buyurtmalar ro'yxati noto'g'ri formatda.")
@@ -344,7 +343,7 @@ async function updateOrderStatus(order, status) {
   const previousStatus = order.status
   order.status = status
   try {
-    const response = await axios.put(`${API_BASE}/orders/update/${order.id}`, order)
+    const response = await api.put(`/orders/update/${order.id}`, order)
     if (response.data !== true) throw new Error('Buyurtma statusi yangilanmadi.')
 
     const userOrders = JSON.parse(localStorage.getItem(`velox_orders:${order.userId}`) || '[]')
@@ -367,7 +366,7 @@ async function deleteOrder(id) {
   if (!confirm("Bu buyurtmani o'chirmoqchimisiz?")) return
   ordersActionError.value = ''
   try {
-    await axios.delete(`${API_BASE}/orders/delete/${id}`)
+    await api.delete(`/orders/delete/${id}`)
     orders.value = orders.value.filter((order) => order.id !== id)
   } catch (error) {
     console.error('Buyurtmani o\'chirishda xato:', error)

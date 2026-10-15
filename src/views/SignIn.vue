@@ -77,20 +77,44 @@ const showPassword = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 
+function getUserFromToken(token) {
+  const payload = token.split('.')[1]
+  if (!payload) throw new Error('Login javobida token topilmadi.')
+
+  const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+  const paddedBase64 = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+  const bytes = Uint8Array.from(atob(paddedBase64), (character) => character.charCodeAt(0))
+  const claims = JSON.parse(new TextDecoder().decode(bytes))
+
+  if (!claims.id || !claims.sub || !['ADMIN', 'USER'].includes(claims.role)) {
+    throw new Error('Login javobidagi token ma’lumotlari noto‘g‘ri.')
+  }
+
+  return {
+    id: claims.id,
+    email: claims.sub,
+    name: claims.name,
+    role: claims.role
+  }
+}
+
 async function signIn() {
   errorMessage.value = ''
   loading.value = true
 
   try {
-    const response = await api.post('/users/login', null, {
+    const response = await api.post('/auth/login', null, {
       params: { email: email.value, password: password.value }
     })
 
-    const user = response.data
-    if (user.role === 'ADMIN' || user.role === 'USER') {
-      localStorage.setItem('velox_user', JSON.stringify(user))
-      window.dispatchEvent(new Event('velox-user-changed'))
+    if (typeof response.data !== 'string') {
+      throw new Error('Login javobida token topilmadi.')
     }
+    const token = response.data.trim()
+    const user = getUserFromToken(token)
+    localStorage.setItem('velox_token', token)
+    localStorage.setItem('velox_user', JSON.stringify(user))
+    window.dispatchEvent(new Event('velox-user-changed'))
 
     if (user.role === 'ADMIN') {
       router.push('/admin')
