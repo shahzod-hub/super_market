@@ -107,7 +107,8 @@ async function fetchServerNotifications() {
 function syncCurrentUser() {
   try {
     const user = JSON.parse(localStorage.getItem('velox_user') || 'null')
-    const nextUserId = user?.role === 'USER' && user.id ? String(user.id) : ''
+    const hasToken = Boolean(localStorage.getItem('velox_token'))
+    const nextUserId = hasToken && user?.role === 'USER' && user.id ? String(user.id) : ''
     if (nextUserId !== currentUserId.value) {
       currentUserId.value = nextUserId
       serverNotifications.value = []

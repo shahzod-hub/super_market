@@ -87,7 +87,7 @@ async function signUp() {
   errorMessage.value = ''
   loading.value = true
   try {
-    const response = await api.post('/users/signUp', {
+    const response = await api.post('/auth/signUp', {
       name: name.value,
       email: email.value,
       password: password.value
